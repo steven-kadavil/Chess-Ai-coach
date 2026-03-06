@@ -15,6 +15,9 @@ export default ({ mode }: ConfigEnv) => {
     server: {
       port: 3000,
     },
+    optimizeDeps: {
+      exclude: ['stockfish'],
+    },
     plugins: [
       tsConfigPaths({
         projects: ['./tsconfig.json'],
