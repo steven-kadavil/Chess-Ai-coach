@@ -11,6 +11,7 @@ export interface MoveResult {
   san: string;
   from: string;
   to: string;
+  fen: string; // FEN after the move — use this to avoid stale closure bugs
   isCapture: boolean;
   capturedPiece: string | undefined;
   isCheck: boolean;
@@ -112,6 +113,7 @@ export function useChessGame() {
         san: result.san,
         from,
         to,
+        fen: next.fen(),
         isCapture: !!result.captured,
         capturedPiece: result.captured ? PIECE_NAMES[result.captured] : undefined,
         isCheck: next.inCheck(),
