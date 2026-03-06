@@ -47,6 +47,9 @@ function parseBestMove(line: string): string | null {
  * The useEffect here is intentional — a Web Worker is a real external system,
  * not derived state, so lifecycle management via an effect is correct per
  * project conventions (CLAUDE.md rule #6).
+ *
+ * Stockfish is served from /public/stockfish.js (copied from the npm package)
+ * so it can be loaded as a plain worker URL without WASM or cross-origin headers.
  */
 export function useStockfish({
   skillLevel = 1,
@@ -61,10 +64,7 @@ export function useStockfish({
   onBestMoveRef.current = onBestMove;
 
   useEffect(() => {
-    const worker = new Worker(
-      new URL('stockfish/src/stockfish-nnue-16.js', import.meta.url),
-      { type: 'classic' },
-    );
+    const worker = new Worker('/stockfish.js');
 
     worker.onmessage = (event: MessageEvent<string>) => {
       const bestMove = parseBestMove(event.data);

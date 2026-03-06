@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { ClientOnly } from '@tanstack/react-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ChessBoard } from '~/components/chess/ChessBoard';
 import { FeedbackPanel } from '~/components/chess/FeedbackPanel';
 import { useChessGame, type MoveResult } from '~/hooks/useChessGame';
@@ -56,9 +56,8 @@ function ChessGame() {
   } = useChessGame();
 
   const [feedback, setFeedback] = useState<string | null>(null);
-
-  // Cleared on reset to cancel any in-flight Stockfish delay
-  const cpuDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True after player moves — waits for the kid to click "Let computer move"
+  const [awaitingCpuMove, setAwaitingCpuMove] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Core move handler — shared by player clicks, drags, and CPU response
@@ -72,9 +71,10 @@ function ChessGame() {
       // Show "Coach is thinking..." immediately
       setFeedback(null);
 
-      // Ask Claude for feedback (non-blocking — result lands whenever ready)
+      // Ask Claude for feedback (non-blocking)
       getChessFeedback({
         data: {
+          fen: result.fen,
           san: result.san,
           moveNumber: result.moveNumber,
           isPlayerMove: result.isPlayerMove,
@@ -86,18 +86,15 @@ function ChessGame() {
         },
       }).then(({ feedback: text }) => setFeedback(text));
 
-      // Ask Stockfish to reply after a short delay (gives board time to animate)
+      // After a player move, wait for the kid to confirm before CPU fires
       if (!result.isCheckmate && !result.isDraw && result.isPlayerMove) {
-        cpuDelayRef.current = setTimeout(() => {
-          requestMove(result.fen);
-        }, 300);
+        setAwaitingCpuMove(true);
       }
     },
-    [makeMove], // requestMove added via closure below — see note
+    [makeMove],
   );
 
-  // onBestMove is stabilised inside useStockfish via a ref, so handleMove
-  // identity changing between renders is fine — the latest version is always called.
+  // onBestMove is stabilised inside useStockfish via a ref
   const { requestMove, resetEngine } = useStockfish({
     skillLevel: 1,
     depth: 3,
@@ -106,11 +103,17 @@ function ChessGame() {
         const from = uciMove.slice(0, 2);
         const to   = uciMove.slice(2, 4);
         const promotion = uciMove[4]; // defined only for pawn promotions
+        setAwaitingCpuMove(false);
         handleMove(from, to, promotion);
       },
       [handleMove],
     ),
   });
+
+  // Called when kid clicks "Let the computer move!"
+  const onCpuTurn = useCallback(() => {
+    requestMove(fen);
+  }, [requestMove, fen]);
 
   // ---------------------------------------------------------------------------
   // Click handler — distinguish select vs move
@@ -134,7 +137,7 @@ function ChessGame() {
   // ---------------------------------------------------------------------------
 
   const onNewGame = useCallback(() => {
-    if (cpuDelayRef.current) clearTimeout(cpuDelayRef.current);
+    setAwaitingCpuMove(false);
     resetGame();
     resetEngine();
     setFeedback(null);
@@ -173,6 +176,8 @@ function ChessGame() {
             gameStatus={gameStatus}
             feedback={feedback}
             capturedPieces={capturedPieces}
+            awaitingCpuMove={awaitingCpuMove}
+            onCpuTurn={onCpuTurn}
             onNewGame={onNewGame}
           />
         </div>

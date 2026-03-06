@@ -76,3 +76,4 @@ src/routeTree.gen.ts
 /src/server/function/CLAUDE.md
 /src/server/function/CLAUDE.md.bak
 # END Ruler Generated Files
+public/stockfish.js

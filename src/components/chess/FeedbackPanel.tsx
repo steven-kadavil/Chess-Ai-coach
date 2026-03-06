@@ -10,6 +10,8 @@ interface FeedbackPanelProps {
   gameStatus: GameStatus;
   feedback: string | null; // null = Claude is thinking (show pulse)
   capturedPieces: CapturedPieces;
+  awaitingCpuMove: boolean; // true = player has moved, waiting for confirmation
+  onCpuTurn: () => void;
   onNewGame: () => void;
 }
 
@@ -28,23 +30,32 @@ const PIECE_EMOJI: Record<string, string> = {
 
 const GAME_OVER_MESSAGES: Record<string, string> = {
   checkmate: 'Checkmate!',
-  stalemate: 'Stalemate — it\'s a draw!',
-  draw:      'It\'s a draw!',
+  stalemate: "Stalemate — it's a draw!",
+  draw:      "It's a draw!",
 };
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function TurnIndicator({ isPlayerTurn, isGameOver, gameStatus }: {
+function TurnIndicator({ isPlayerTurn, isGameOver, awaitingCpuMove, gameStatus }: {
   isPlayerTurn: boolean;
   isGameOver: boolean;
+  awaitingCpuMove: boolean;
   gameStatus: GameStatus;
 }) {
   if (isGameOver) {
     return (
       <div className="rounded-xl px-4 py-3 text-center font-bold text-lg bg-purple-100 text-purple-800 border-2 border-purple-300">
         {GAME_OVER_MESSAGES[gameStatus] ?? 'Game over!'}
+      </div>
+    );
+  }
+
+  if (awaitingCpuMove) {
+    return (
+      <div className="rounded-xl px-4 py-3 text-center font-bold text-lg bg-orange-100 text-orange-800 border-2 border-orange-300">
+        Read the feedback, then let the computer move!
       </div>
     );
   }
@@ -97,8 +108,8 @@ function CapturedPiecesDisplay({ capturedPieces }: { capturedPieces: CapturedPie
 
   return (
     <div className="space-y-1">
-      <CapturedRow label="You got:"       pieces={capturedPieces.byWhite} />
-      <CapturedRow label="Computer got:"  pieces={capturedPieces.byBlack} />
+      <CapturedRow label="You got:"      pieces={capturedPieces.byWhite} />
+      <CapturedRow label="Computer got:" pieces={capturedPieces.byBlack} />
     </div>
   );
 }
@@ -109,7 +120,7 @@ function CapturedPiecesDisplay({ capturedPieces }: { capturedPieces: CapturedPie
 
 /**
  * Pure presentational sidebar panel — no state, no logic.
- * Shows turn status, Coach feedback, captured pieces, and new-game button.
+ * Shows turn status, Coach feedback, captured pieces, and action buttons.
  */
 export function FeedbackPanel({
   isPlayerTurn,
@@ -117,6 +128,8 @@ export function FeedbackPanel({
   gameStatus,
   feedback,
   capturedPieces,
+  awaitingCpuMove,
+  onCpuTurn,
   onNewGame,
 }: FeedbackPanelProps) {
   return (
@@ -124,12 +137,22 @@ export function FeedbackPanel({
       <TurnIndicator
         isPlayerTurn={isPlayerTurn}
         isGameOver={isGameOver}
+        awaitingCpuMove={awaitingCpuMove}
         gameStatus={gameStatus}
       />
 
       <CoachFeedback feedback={feedback} />
 
       <CapturedPiecesDisplay capturedPieces={capturedPieces} />
+
+      {awaitingCpuMove && !isGameOver && (
+        <button
+          onClick={onCpuTurn}
+          className="rounded-xl px-4 py-3 font-bold text-white bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all"
+        >
+          OK, computer — your turn!
+        </button>
+      )}
 
       <button
         onClick={onNewGame}

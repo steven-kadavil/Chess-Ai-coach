@@ -17,6 +17,8 @@ function renderPanel(overrides: {
   feedback?: string | null;
   capturedPieces?: CapturedPieces;
   onNewGame?: () => void;
+  awaitingCpuMove?: boolean;
+  onCpuTurn?: () => void;
 } = {}) {
   const props = {
     isPlayerTurn: true,
@@ -25,6 +27,8 @@ function renderPanel(overrides: {
     feedback: 'Great move!',
     capturedPieces: EMPTY_CAPTURED,
     onNewGame: vi.fn(),
+    awaitingCpuMove: false,
+    onCpuTurn: vi.fn(),
     ...overrides,
   };
   render(<FeedbackPanel {...props} />);
